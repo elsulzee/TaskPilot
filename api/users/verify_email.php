@@ -1,13 +1,13 @@
 <?php
+require_once "../config/bootstrap.php";
+
 header("Content-Type: application/json");
-require_once("../CONFIG/task_pilot_db.php");
 
 $token = isset($_GET['token']) ? clean_input(trim($_GET['token'])) : null;
 
 
 if (!$token) {
-    echo json_encode(["error" => "Verification token is required."]);
-    exit;
+    respond(false, "Verification token is required.");
 }
 
 // Check token
@@ -17,8 +17,7 @@ $stmt->execute();
 $result = $stmt->get_result();
 
 if ($result->num_rows !== 1) {
-    echo json_encode(["error" => "Invalid or expired verification token."]);
-    exit;
+    respond(false, "Invalid or expired verification token.");
 }
 
 $user = $result->fetch_assoc();
@@ -27,6 +26,10 @@ $user = $result->fetch_assoc();
 $update = $conn->prepare("UPDATE users SET email_verified = 1, verify_token = NULL WHERE id = ?");
 $update->bind_param("i", $user['id']);
 $update->execute();
-
-echo json_encode(["message" => "Email verified successfully. You can now log in."]);
+if ($update->execute()){
+respond(true, "Email verified successfully. You can now log in.");
+} else {
+    http_response_code(500);
+    respond(false, "Failed to update verification status.");
+}
 ?>
